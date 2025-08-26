@@ -16,11 +16,11 @@ const router = Router();
 }
  */
 router.post("/capture", async (req, res) => {
-  const { soruce, city, country, value_c, captured_at, trace_id } = req.body;
+  const { soruce, city, value_c, captured_at, trace_id } = req.body;
 
   try {
     // Validacion de campos obligatorios
-    if (!soruce || !city || !country || !value_c || !captured_at || !trace_id) {
+    if (!soruce || !city || !value_c || !captured_at || !trace_id) {
       return res.status(400).json({ error: "Faltan campos obligatorios" });
     }
 
@@ -31,17 +31,13 @@ router.post("/capture", async (req, res) => {
     }
 
     // Convierto la fecha a timestamp
-    const capturedAtDate = new Date(captured_at);
-    if (isNaN(capturedAtDate.getTime())) {
-      return res.status(400).json({ error: "Fecha de captura inválida" });
-    }
 
-    const capturedAtTimestamp = Math.floor(capturedAtDate.getTime() / 1000);
+    const capturedAtDate = new Date(captured_at);
 
     const resultSave = await storeModel.save(
       city,
       value_c,
-      capturedAtTimestamp,
+      capturedAtDate,
       soruce,
       trace_id
     );

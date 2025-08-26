@@ -13,7 +13,7 @@ class QueryModel {
       const sql = `SELECT * FROM data_schema.temperature_measurements ${whereClause} ORDER BY captured_at DESC LIMIT 100`;
 
       const response = new Promise((resolve, reject) => {
-        this.db.query(sql, queryValues, (err, results) => {
+        pool.query(sql, queryValues, (err, results) => {
           if (err) {
             console.error("Error en consulta SQL:", err);
             return reject({
@@ -33,4 +33,4 @@ class QueryModel {
   }
 }
 
-export default QueryModel;
+export default new QueryModel();

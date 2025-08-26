@@ -12,11 +12,15 @@ import pool from "./config/db.js";
 
 // Ruta de controlado de guardado de info
 import storeRouter from "./controller/store.controller.js";
+import queryRouter from "./controller/query.controller.js";
 import swaggerDocsRouter from "./swaggerDocs.js";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || "development";
+
+// Dile a Express que confíe en el proxy
+app.set("trust proxy", 1);
 
 // Compresión GZIP
 app.use(
@@ -33,7 +37,7 @@ app.use(
 // Configuración de CORS
 app.use(
   cors({
-    origin: true,
+    origin: false,
     credentials: true,
   })
 );
@@ -85,6 +89,7 @@ app.get("/status", (req, res) => {
 
 // Rutas de la API
 app.use("/store", storeRouter);
+app.use("/query", queryRouter);
 
 app.use(swaggerDocsRouter);
 // Manejo de rutas no encontradas

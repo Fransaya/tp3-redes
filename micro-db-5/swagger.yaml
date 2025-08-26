@@ -1,0 +1,114 @@
+openapi: 3.0.0
+info:
+  title: Microservicio de Almacenamiento y Consulta de Temperaturas
+  version: 1.0.0
+  description: API para almacenar y consultar mediciones de temperatura.
+servers:
+  - url: http://localhost:3001
+paths:
+  /store/capture:
+    post:
+      summary: Guardar medición de temperatura
+      description: Guarda una nueva medición de temperatura en la base de datos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                  example: web
+                city:
+                  type: string
+                  example: Buenos Aires
+                country:
+                  type: string
+                  example: AR
+                value_c:
+                  type: number
+                  example: 23.5
+                captured_at:
+                  type: string
+                  format: date-time
+                  example: "2025-08-26T11:22:33.123Z"
+                trace_id:
+                  type: string
+                  format: uuid
+                  example: 2f5c1b52-5e5e-4a1e-8f1a-99d5b5ce0a00
+              required:
+                - source
+                - city
+                - value_c
+                - captured_at
+                - trace_id
+      responses:
+        "201":
+          description: Datos guardados correctamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "400":
+          description: Faltan campos obligatorios
+        "403":
+          description: Fuente no autorizada
+        "500":
+          description: Error al guardar los datos
+
+  /query/data:
+    get:
+      summary: Consultar mediciones de temperatura
+      description: Consulta las mediciones almacenadas, filtrando por ciudad, país y fecha de captura.
+      parameters:
+        - in: query
+          name: city
+          schema:
+            type: string
+          description: Ciudad a filtrar
+        - in: query
+          name: country
+          schema:
+            type: string
+          description: País a filtrar
+        - in: query
+          name: captured_at
+          schema:
+            type: string
+            format: date-time
+          description: Fecha de captura a filtrar
+      responses:
+        "200":
+          description: Consulta exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: integer
+                  data:
+                    type: object
+                    properties:
+                      rows:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            source:
+                              type: string
+                            city:
+                              type: string
+                            temperature:
+                              type: number
+                            captured_at:
+                              type: string
+                              format: date-time
+                            trace_id:
+                              type: string
+        "500":
+          description: Error interno del servidor
