@@ -12,6 +12,7 @@ import pool from "./config/db.js";
 
 // Ruta de controlado de auth
 import authRouter from "./controller/auth.controller.js";
+import swaggerDocsRouter from "./swaggerDocs.js";
 
 // Ruta de controlado de token
 import tokenRouter from "./controller/token.controller.js";
@@ -87,6 +88,7 @@ app.get("/health", (req, res) => {
 
 app.use("/auth", authRouter);
 app.use("/token", tokenRouter);
+app.use(swaggerDocsRouter);
 // Manejo de rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });

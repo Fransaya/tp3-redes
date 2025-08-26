@@ -1,0 +1,74 @@
+openapi: 3.0.0
+info:
+  title: Microservicio de Autenticación
+  version: 1.0.0
+  description: API para autenticación y refresco de tokens JWT.
+paths:
+  /auth/login:
+    post:
+      summary: Autenticación de usuario
+      description: Autentica un usuario y retorna tokens JWT.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+              required:
+                - username
+                - password
+      responses:
+        '200':
+          description: Autenticación exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                  expiresIn:
+                    type: integer
+                  tokenType:
+                    type: string
+        '401':
+          description: Credenciales inválidas
+        '500':
+          description: Error interno del servidor
+
+  /token/refresh:
+    post:
+      summary: Refrescar access token
+      description: Genera un nuevo access token usando un refresh token válido.
+      responses:
+        '200':
+          description: Nuevo access token generado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  accessToken:
+                    type: string
+        '401':
+          description: Token inválido o usuario inválido
+        '500':
+          description: Error interno del servidor
