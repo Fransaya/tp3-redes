@@ -1,0 +1,16 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-service
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/usr/src/app/src
+    env_file:
+      - .env
+    restart: unless-stopped
+    command: ["npm", "run", "dev"]
