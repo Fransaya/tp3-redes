@@ -5,6 +5,9 @@ import rateLimit from "express-rate-limit";
 import cors from "cors";
 import compression from "compression";
 
+// Funcion para consulta de tockens
+import { loginMicroService } from "./utils/auth.js";
+
 dotenv.config(); // Cargar variables de entorno primero
 
 // Ahora importamos la configuración de la DB
@@ -96,6 +99,9 @@ app.use(swaggerDocsRouter);
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
+
+// Llamado de funcion de login para guadado de credenciales
+loginMicroService();
 
 // Middleware de manejo de errores mejorado
 app.use((err, req, res, next) => {
