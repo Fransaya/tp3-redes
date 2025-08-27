@@ -5,8 +5,8 @@ import rateLimit from "express-rate-limit";
 import cors from "cors";
 import compression from "compression";
 
-// Funcion para consulta de tockens
-import { loginMicroService } from "./utils/auth.js";
+// Middleware para manejo  y validacion de JWT
+import { jwtVerify } from "./middleware/jwtMiddleware.js";
 
 dotenv.config(); // Cargar variables de entorno primero
 
@@ -16,14 +16,12 @@ import pool from "./config/db.js";
 // Ruta de controlado de guardado de info
 import storeRouter from "./controller/store.controller.js";
 import queryRouter from "./controller/query.controller.js";
+// Ruta de documentacion Swagger
 import swaggerDocsRouter from "./swaggerDocs.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || "development";
-
-// Dile a Express que confíe en el proxy
-app.set("trust proxy", 1);
 
 // Compresión GZIP
 app.use(
@@ -91,17 +89,14 @@ app.get("/status", (req, res) => {
 });
 
 // Rutas de la API
-app.use("/store", storeRouter);
-app.use("/query", queryRouter);
+app.use("/store", jwtVerify, storeRouter);
+app.use("/query", jwtVerify, queryRouter);
 
 app.use(swaggerDocsRouter);
 // Manejo de rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
 });
-
-// Llamado de funcion de login para guadado de credenciales
-loginMicroService();
 
 // Middleware de manejo de errores mejorado
 app.use((err, req, res, next) => {

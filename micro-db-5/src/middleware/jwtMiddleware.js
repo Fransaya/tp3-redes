@@ -1,12 +1,17 @@
 import jwt from "jsonwebtoken";
 
-export async function jwtMiddleware(req, res, next) {
-  const authHeader = req.headers["refresh-token"];
+export async function jwtVerify(req, res, next) {
+  const authHeader = req.headers["authorization"];
   if (!authHeader) {
     return res.status(401).json({ error: "No token provided" });
   }
 
-  const token = authHeader;
+  const tokenParts = authHeader.split(" ");
+  if (tokenParts.length !== 2 || tokenParts[0] !== "Bearer") {
+    return res.status(401).json({ error: "Malformed token" });
+  }
+
+  const token = tokenParts[1];
 
   if (!token) {
     return res.status(401).json({ error: "Malformed token" });
