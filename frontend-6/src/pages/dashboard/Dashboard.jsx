@@ -39,7 +39,7 @@ const Dashboard = () => {
 
     try {
       const response = await axios.get(
-        `${import.meta.env.VITE_DB_MICRO_TEST}/query/data`,
+        `${import.meta.env.VITE_DB_MICRO}/query/data`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
