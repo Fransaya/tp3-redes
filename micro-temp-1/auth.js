@@ -10,9 +10,9 @@ const PASSWORD = process.env.PASSWORD;
  */
 export async function login() {
     try {
-        console.log('Enviando login con:', { username: USERNAME, password: PASSWORD });
+        console.log('Enviando login con:', { username: "temp_capture_service", password: PASSWORD });
 
-        const response = await fetch(LOGIN_URL, {
+        const response = await fetch("https://tp3-redes.onrender.com/auth/login", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
