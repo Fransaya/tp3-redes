@@ -6,6 +6,8 @@ dotenv.config();
 const WS_URL = process.env.WS_URL || "ws://localhost:3001";
 const TOKEN = process.env.BEARER_TOKEN || "TU_BEARER_TOKEN";
 const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 5000;
+const LOCAL_ENDPOINT =
+  process.env.LOCAL_TEMPERATURES_ENDPOINT || "http://localhost:3000/temperaturas";
 
 let ws;
 let sendInterval;
@@ -20,15 +22,25 @@ export function connectAndSend() {
   ws.on("open", () => {
     console.log("Conectado al WebSocket:", WS_URL);
 
-    // Enviar datos cada INTERVAL_MS
+    // Enviar el array obtenido desde /temperaturas cada INTERVAL_MS
     sendInterval = setInterval(() => {
-      const payload = {
-        sensor: "temperature",
-        value: Math.round(20 + Math.random() * 10), // ejemplo de dato
-        timestamp: new Date().toISOString(),
-      };
-      ws.send(JSON.stringify(payload));
-      console.log("Enviado:", payload);
+      // envolver en IIFE async para usar await dentro de setInterval
+      (async () => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+        try {
+          const resp = await fetch(LOCAL_ENDPOINT);
+          if (!resp.ok) {
+            console.error("Error al obtener temperaturas:", resp.status, resp.statusText);
+            return;
+          }
+          const data = await resp.json(); // debe ser un array con 3 JSONs
+          ws.send(JSON.stringify(data));
+          console.log("Enviado al WS:", data);
+        } catch (err) {
+          console.error("Error fetch->WS:", err.message || err);
+        }
+      })();
     }, INTERVAL_MS);
   });
 
@@ -39,7 +51,7 @@ export function connectAndSend() {
   });
 
   ws.on("error", (err) => {
-    console.error("Error en WebSocket:", err.message);
+    console.error("Error en WebSocket:", err.message || err);
   });
 
   ws.on("message", (data) => {
