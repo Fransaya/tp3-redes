@@ -1,8 +1,15 @@
 import axios from "axios";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
 
-const AUTH_URL = "https://tp3-redes.onrender.com/auth";
-const CREDENTIALS = { username: "ws_forwarding_service", password: "m1croS3ervice.ws$" };
+dotenv.config(); // Cargar variables de entorno
+
+const AUTH_URL = process.env.AUTH_URL; // Leer AUTH_URL desde .env
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; // Leer JWT_REFRESH_SECRET desde .env
+const CREDENTIALS = { 
+  username: process.env.AUTH_USERNAME, // Leer USERNAME desde .env
+  password: process.env.PASSWORD  // Leer PASSWORD desde .env
+};
 
 let tokens = {
   accessToken: null,
@@ -13,7 +20,7 @@ let tokens = {
 // Login inicial
 export async function login() {
   try {
-    const res = await axios.post(`${AUTH_URL}/login`, CREDENTIALS);
+    const res = await axios.post(`${AUTH_URL}/auth/login`, CREDENTIALS);
     const { accessToken, refreshToken } = res.data;
 
     tokens.accessToken = accessToken;
@@ -32,6 +39,7 @@ export async function login() {
 // Refresh
 export async function refresh() {
   try {
+    console.log("[Auth] Intentando renovar el token...");
     const res = await axios.post(`${AUTH_URL}/token/refresh`, {
       refreshToken: tokens.refreshToken,
     });
@@ -41,7 +49,9 @@ export async function refresh() {
     const decoded = jwt.decode(tokens.accessToken);
     tokens.exp = decoded.exp;
 
-    console.log("[Auth] Token renovado");
+    console.log("[Auth] Token renovado exitosamente");
+    console.log("Nuevo accessToken:", tokens.accessToken);
+    console.log("Expiración:", tokens.exp);
   } catch (error) {
     console.error("[Auth] Error en refresh:", error.message);
   }
