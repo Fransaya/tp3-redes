@@ -1,8 +1,11 @@
 import WebSocket, { WebSocketServer } from "ws";
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config(); // Cargar variables de entorno
 
 const WS_PORT = 3001;
-const JWT_SECRET = "aLwumlR7biFfQZRuPrCR0awMXQt8YeypZwHkS1Vi2xM"; // ⚠️ usa el mismo que Auth Micro
+const JWT_SECRET = process.env.JWT_SECRET; // Leer JWT_SECRET desde .env
 
 export function startWebSocketServer() {
   const wss = new WebSocketServer({ port: WS_PORT });
@@ -20,10 +23,7 @@ export function startWebSocketServer() {
 
     try {
       // 2. Validar JWT
-      const decoded = jwt.verify(token, JWT_SECRET, {
-        issuer: "auth-service",   // opcional: ajustar al iss real
-        audience: "micro2-service" // opcional: ajustar al aud real
-      });
+      const decoded = jwt.verify(token, JWT_SECRET);
 
       console.log("[WS] ✅ Conexión aceptada. User:", decoded.username);
 
