@@ -16,30 +16,37 @@ const router = Router();
 }
  */
 router.post("/capture", async (req, res) => {
-  const { soruce, city, value_c, captured_at, trace_id } = req.body;
+  const body = req.body;
 
   try {
+    console.log("body", req.body);
     // Validacion de campos obligatorios
-    if (!soruce || !city || !value_c || !captured_at || !trace_id) {
+    if (
+      !body.source ||
+      !body.city ||
+      !body.value_c ||
+      !body.captured_at ||
+      !body.trace_id
+    ) {
       return res.status(400).json({ error: "Faltan campos obligatorios" });
     }
 
     const sourceAccept = process.env.SOURCE_ACEPT;
 
-    if (soruce !== sourceAccept) {
+    if (body.source !== sourceAccept) {
       return res.status(403).json({ error: "Fuente no autorizada" });
     }
 
     // Convierto la fecha a timestamp
 
-    const capturedAtDate = new Date(captured_at);
+    const capturedAtDate = new Date(body.captured_at);
 
     const resultSave = await storeModel.save(
-      city,
-      value_c,
+      body.city,
+      body.value_c,
       capturedAtDate,
-      soruce,
-      trace_id
+      body.source,
+      body.trace_id
     );
 
     if (!resultSave.success) {
@@ -48,6 +55,7 @@ router.post("/capture", async (req, res) => {
 
     return res.status(201).json({ message: "Datos guardados correctamente" });
   } catch (error) {
+    console.error("Error al procesar la solicitud:", error);
     return res.status(500).json({ error: "Error interno del servidor" });
   }
 });

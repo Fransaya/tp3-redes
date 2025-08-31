@@ -1,21 +1,20 @@
 import express from "express";
-import dotenv from "dotenv";
-import http from "http";
-import rateLimit from "express-rate-limit";
 import cors from "cors";
+import http from "http";
+import dotenv from "dotenv";
 import compression from "compression";
+import rateLimit from "express-rate-limit";
 
-dotenv.config(); // Cargar variables de entorno primero
+// Metodo de autenticacion
+import AuthService from "./services/auth.service.js";
 
-// Ahora importamos la configuración de la DB
-import pool from "./config/db.js";
+// Metodos para almacenmiento de data session (accessToken, refreshToken, expiresIn)
+import { saveSession } from "./services/token.service.js";
 
-// Ruta de controlado de auth
-import authRouter from "./controller/auth.controller.js";
-import swaggerDocsRouter from "./swaggerDocs.js";
+// controlador de data
+import dataController from "./controller/data.controller.js";
 
-// Ruta de controlado de token
-import tokenRouter from "./controller/token.controller.js";
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -61,7 +60,7 @@ const createRateLimiter = (windowMs, max, skipSuccessfulRequests = false) =>
   });
 
 // Rate limiter general
-const generalLimiter = createRateLimiter(15 * 60 * 1000, 200); // 200 req/15min
+const generalLimiter = createRateLimiter(60 * 1000, 100); // 100 req/1min
 app.use(generalLimiter);
 
 // Middleware para parsing JSON optimizado
@@ -88,9 +87,8 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.use("/auth", authRouter);
-app.use("/token", tokenRouter);
-app.use(swaggerDocsRouter);
+app.use("/api", dataController);
+
 // Manejo de rutas no encontradas
 app.use((req, res) => {
   res.status(404).json({ error: "Ruta no encontrada" });
@@ -118,14 +116,36 @@ app.use((err, req, res, next) => {
 
 const server = http.createServer(app);
 
+const authenticateService = async () => {
+  try {
+    const authService = new AuthService();
+    const session = await authService.login({
+      username: process.env.AUTH_USER,
+      password: process.env.AUTH_PASSWORD,
+    });
+
+    console.log("data to session", session);
+
+    if (session.status == "success") {
+      const expireIn = new Date();
+      expireIn.setSeconds(expireIn.getSeconds() + session.expiresIn);
+      console.log("Session expirará en:", expireIn);
+      const accessToken = session.accessToken;
+      const refreshToken = session.refreshToken;
+
+      saveSession({ accessToken, refreshToken, expireIn });
+    }
+  } catch (error) {
+    console.log("ERROR EN LOGIN", error);
+    console.error("❌ Error de autenticación:", error.message);
+  }
+};
+
 // Inicialización del servidor
 const startServer = async () => {
   try {
-    // Probar conexión a DB
-    const client = await pool.connect();
-    console.log("✅ Conexión exitosa a la base de datos");
-    client.release();
-
+    // Autenticación inicial al iniciar
+    await authenticateService();
     // Iniciar servidor
     server.listen(PORT, () => {
       console.log(`🚀 HTTP Server running on port ${PORT} (${NODE_ENV})`);
