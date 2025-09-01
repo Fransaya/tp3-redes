@@ -3,7 +3,7 @@ import WebSocket from "ws";
 
 dotenv.config();
 
-const WS_URL = "https://1tvmr2fr-3001.brs.devtunnels.ms/";
+const WS_URL = process.env.WS_URL;
 const TOKEN = process.env.BEARER_TOKEN || "TU_BEARER_TOKEN";
 const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 30000;
 const LOCAL_ENDPOINT =
