@@ -5,12 +5,18 @@ dotenv.config();
 
 const WS_URL = process.env.WS_URL || "ws://localhost:3001";
 const TOKEN = process.env.BEARER_TOKEN || "TU_BEARER_TOKEN";
-const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 5000;
+const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 10000;
 const LOCAL_ENDPOINT =
   process.env.LOCAL_TEMPERATURES_ENDPOINT || "http://localhost:3000/temperaturas";
 
 let ws;
 let sendInterval;
+
+let accessTokenLocal = null;
+let tokenExpiryLocal = null;
+let refreshTokenLocal = null;
+
+import { getAccessToken, getRefreshToken, isTokenExpired, setTokens } from "./utils/tokenManager";
 
 export function connectAndSend() {
   ws = new WebSocket(WS_URL, {
@@ -21,12 +27,35 @@ export function connectAndSend() {
 
   ws.on("open", () => {
     console.log("Conectado al WebSocket:", WS_URL);
+    accessTokenLocal = getAccessToken();
+    refreshTokenLocal = getRefreshToken();
+    
 
     // Enviar el array obtenido desde /temperaturas cada INTERVAL_MS
     sendInterval = setInterval(() => {
       // envolver en IIFE async para usar await dentro de setInterval
       (async () => {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        
+        // Manejo de expiracion de token
+        if (isTokenExpired(tokenExpiryLocal)) { //* si expiro renueva el token ( hace un await para esperara a que se renueve )
+          // Generacion de nuevo token
+          // ! aca tenes que agregar el enpoint de refresh
+          console.log("Token expirado, obteniendo nuevo token...");
+          // const newTokens = await refreshAccessToken(refreshTokenLocal);
+          // if (newTokens) {
+          //   accessTokenLocal = newTokens.accessToken;
+          //   refreshTokenLocal = newTokens.refreshToken;
+          //   tokenExpiryLocal = Date.now() + newTokens.expiresIn * 1000; // actualizar expiracion //! esto tengo duda no se si iria asi 
+          //   console.log("Nuevo Access Token:", accessTokenLocal);
+          // setTokens({accessTokenLocal, refreshTokenLocal, expiresIn: newTokens.expiresIn});
+          
+          // } else {
+          //   console.error("No se pudo refrescar el token, abortando envío.");
+          //   return;
+          // }
+        }
+        
 
         try {
           const resp = await fetch(LOCAL_ENDPOINT);
@@ -37,6 +66,11 @@ export function connectAndSend() {
           const data = await resp.json(); // debe ser un array con 3 JSONs
           ws.send(JSON.stringify(data));
           console.log("Enviado al WS:", data);
+          
+          // ! aca tenes que conectar tu ws con el del tilo hijo de puta y enviarle un msj al tilo
+          //! tambien tenes que enviar el token el accessToken ( ver como )
+          ws.send(JSON.stringify({ message: "Hola Tilo, soy tu padre" }));
+          
         } catch (err) {
           console.error("Error fetch->WS:", err.message || err);
         }
