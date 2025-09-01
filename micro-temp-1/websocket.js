@@ -3,9 +3,9 @@ import WebSocket from "ws";
 
 dotenv.config();
 
-const WS_URL = process.env.WS_URL || "ws://localhost:3001";
+const WS_URL = "https://1tvmr2fr-3001.brs.devtunnels.ms/";
 const TOKEN = process.env.BEARER_TOKEN || "TU_BEARER_TOKEN";
-const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 10000;
+const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 50000;
 const LOCAL_ENDPOINT =
   process.env.LOCAL_TEMPERATURES_ENDPOINT ||
   "http://localhost:3000/temperaturas";
