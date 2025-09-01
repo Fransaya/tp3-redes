@@ -61,7 +61,7 @@ const createRateLimiter = (windowMs, max, skipSuccessfulRequests = false) =>
   });
 
 // Rate limiter general
-const generalLimiter = createRateLimiter(15 * 60 * 1000, 200); // 200 req/15min
+const generalLimiter = createRateLimiter(1 * 60 * 1000, 5500); // 200 req/15min
 app.use(generalLimiter);
 
 // Middleware para parsing JSON optimizado
