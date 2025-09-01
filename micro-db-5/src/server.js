@@ -23,6 +23,8 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || "development";
 
+app.set("trust proxy", 1);
+
 // Compresión GZIP
 app.use(
   compression({
@@ -121,49 +123,6 @@ app.use((err, req, res, next) => {
 });
 
 const server = http.createServer(app);
-
-// Optimizaciones del servidor
-server.keepAliveTimeout = 65000; // Nginx default + 5s
-server.headersTimeout = 66000; // keepAliveTimeout + 1s
-server.timeout = 120000; // 2 minutos
-server.maxHeadersCount = 2000;
-
-// Manejo elegante de shutdown
-const gracefulShutdown = (signal) => {
-  console.log(`Recibido ${signal}, cerrando servidor graciosamente...`);
-
-  server.close(async () => {
-    console.log("Servidor HTTP cerrado");
-
-    try {
-      await pool.end();
-      console.log("Conexiones de DB cerradas");
-      process.exit(0);
-    } catch (error) {
-      console.error("Error cerrando conexiones DB:", error);
-      process.exit(1);
-    }
-  });
-
-  // Forzar cierre después de 10 segundos
-  setTimeout(() => {
-    console.error("Forzando cierre del servidor");
-    process.exit(1);
-  }, 10000);
-};
-
-process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
-process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-
-// Manejo de errores no capturados
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection en:", promise, "razón:", reason);
-});
-
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
-  process.exit(1);
-});
 
 // Inicialización del servidor
 const startServer = async () => {
