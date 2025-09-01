@@ -116,7 +116,7 @@ app.use((err, req, res, next) => {
 
 const server = http.createServer(app);
 
-const authenticateService = async () => {
+export const authenticateService = async () => {
   try {
     const authService = new AuthService();
     const session = await authService.login({

@@ -12,6 +12,9 @@ import { getSession } from "../services/token.service.js";
 // Metodo para validar expiracion de mi token
 import { isTokenExpired } from "../utils/isTokenExpired.js";
 
+// Metodo para relogueo de user
+import { authenticateService } from "../server.js";
+
 const router = express.Router();
 
 const dataService = new DataService();
@@ -20,7 +23,6 @@ const dataService = new DataService();
 router.post("/dataRecived", verifyJWT, async (req, res, next) => {
   try {
     const data = req.body;
-    console.log("data", data);
 
     if (!data)
       return res.status(400).json({ error: "Faltan datos en la solicitud" });
@@ -29,18 +31,24 @@ router.post("/dataRecived", verifyJWT, async (req, res, next) => {
       // Proceso de renovacion de token
     }
 
-    const session = getSession();
+    let session = getSession();
 
-    console.log("session", session);
+    if (!session) {
+      // Hacemos un relogin
+      await authenticateService();
 
-    if (!session)
-      return res.status(401).json({ error: "No hay sesión activa" });
+      // Obtenemos la nueva session re-autenticada
+      const newSession = getSession();
+
+      if (!newSession)
+        return res.status(401).json({ error: "No hay sesión activa" });
+
+      session = newSession;
+    }
 
     // Envio de datos a micro de db
 
     const response = await dataService.sendData(data, session.accessToken);
-
-    console.log("response", response);
 
     return res.status(200).json(response);
   } catch (error) {
