@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import temperatureRoutes from "./routes/temperatureRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 
+import { login } from "./auth.js";
+
 import http from "http";
 
 dotenv.config();
@@ -14,6 +16,8 @@ const app = express();
 const port = 3000;
 
 const server = http.createServer(app);
+
+login();
 
 connectAndSend();
 
