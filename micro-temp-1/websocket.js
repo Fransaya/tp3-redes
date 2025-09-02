@@ -5,7 +5,7 @@ dotenv.config();
 
 const WS_URL = process.env.WS_URL;
 const TOKEN = process.env.BEARER_TOKEN || "TU_BEARER_TOKEN";
-const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 5000;
+const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 30000;
 const LOCAL_ENDPOINT =
   process.env.LOCAL_TEMPERATURES_ENDPOINT ||
   "http://localhost:3005/temperaturas";
