@@ -5,7 +5,7 @@ import { forwardToMicro3 } from "./forwarder.js";
 
 dotenv.config(); // Cargar variables de entorno
 
-const WS_PORT = 3001;
+const WS_PORT = 3004;
 const JWT_SECRET = process.env.JWT_SECRET; // Leer JWT_SECRET desde .env
 
 export function startWebSocketServer() {
@@ -22,7 +22,7 @@ export function startWebSocketServer() {
 
     const token = authHeader.split(" ")[1];
 
-    console.log(token)
+    console.log(token);
 
     try {
       // 2. Validar JWT
@@ -46,20 +46,19 @@ export function startWebSocketServer() {
             const transformedItem = transformToMicro3Format(data);
             await forwardToMicro3(transformedItem);
           }
-
         } catch (err) {
-      
           console.error("[WS] Error procesando mensaje:", err.message);
         }
       });
-
     } catch (err) {
       console.log("[WS] ❌ Token inválido:", err);
       ws.close(1008, "Unauthorized");
     }
   });
 
-  console.log(`[WS] Servidor WebSocket escuchando en ws://localhost:${WS_PORT}`);
+  console.log(
+    `[WS] Servidor WebSocket escuchando en ws://localhost:${WS_PORT}`
+  );
 }
 
 // Función para transformar el formato del JSON

@@ -5,10 +5,12 @@ dotenv.config();
 
 const WS_URL = process.env.WS_URL;
 const TOKEN = process.env.BEARER_TOKEN || "TU_BEARER_TOKEN";
-const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 30000;
+const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 5000;
 const LOCAL_ENDPOINT =
   process.env.LOCAL_TEMPERATURES_ENDPOINT ||
-  "http://localhost:3000/temperaturas";
+  "http://localhost:3005/temperaturas";
+
+import { getTemperatureRefactoring } from "./controllers/temperatureController.js";
 
 let ws;
 let sendInterval;
@@ -63,16 +65,16 @@ export function connectAndSend(token) {
         }
 
         try {
-          const resp = await fetch(LOCAL_ENDPOINT);
-          if (!resp.ok) {
+          const resp = await getTemperatureRefactoring();
+          console.log("res in func", resp);
+          if (!resp) {
             console.error(
-              "Error al obtener temperaturas:",
-              resp.status,
-              resp.statusText
+              "No se pudo obtener las temperaturas, abortando envío."
             );
             return;
           }
-          const data = await resp.json(); // debe ser un array con 3 JSONs
+          const data = resp; // debe ser un array con 3 JSONs
+          // const data = await resp.json(); // debe ser un array con 3 JSONs
           ws.send(JSON.stringify(data));
           console.log("Enviado al WS:", data);
 
