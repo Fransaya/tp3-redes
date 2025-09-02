@@ -13,7 +13,7 @@ import { setTokens } from "./utils/tokenManager.js";
 export async function login() {
   try {
     console.log("Enviando login con:", {
-      username: "temp_capture_service",
+      username: USERNAME,
       password: PASSWORD,
     });
 

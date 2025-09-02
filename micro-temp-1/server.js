@@ -17,9 +17,9 @@ const port = 3000;
 
 const server = http.createServer(app);
 
-login();
+const data = await login();
 
-connectAndSend();
+connectAndSend(data.accessToken);
 
 // Rutas
 app.use("/", temperatureRoutes);

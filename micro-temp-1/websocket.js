@@ -5,7 +5,7 @@ dotenv.config();
 
 const WS_URL = "https://1tvmr2fr-3001.brs.devtunnels.ms/";
 const TOKEN = process.env.BEARER_TOKEN || "TU_BEARER_TOKEN";
-const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 50000;
+const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 30000;
 const LOCAL_ENDPOINT =
   process.env.LOCAL_TEMPERATURES_ENDPOINT ||
   "http://localhost:3000/temperaturas";
@@ -24,10 +24,10 @@ import {
   setTokens,
 } from "./utils/tokenManager.js";
 
-export function connectAndSend() {
+export function connectAndSend(token) {
   ws = new WebSocket(WS_URL, {
     headers: {
-      Authorization: `Bearer ${TOKEN}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
@@ -78,7 +78,7 @@ export function connectAndSend() {
 
           // ! aca tenes que conectar tu ws con el del tilo hijo de puta y enviarle un msj al tilo
           //! tambien tenes que enviar el token el accessToken ( ver como )
-          ws.send(JSON.stringify({ message: "Hola Tilo, soy tu padre" }));
+          ws.send(JSON.stringify(data));
         } catch (err) {
           console.error("Error fetch->WS:", err.message || err);
         }
