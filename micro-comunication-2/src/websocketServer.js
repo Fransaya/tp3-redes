@@ -1,6 +1,7 @@
 import WebSocket, { WebSocketServer } from "ws";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { forwardToMicro3 } from "./forwarder.js";
 
 dotenv.config(); // Cargar variables de entorno
 
@@ -23,6 +24,8 @@ export function startWebSocketServer() {
 
     const token = authHeader.split(" ")[1];
 
+    console.log(token);
+
     try {
       // 2. Validar JWT
       const decoded = jwt.verify(token, JWT_SECRET);
@@ -30,17 +33,27 @@ export function startWebSocketServer() {
       console.log("[WS] ✅ Conexión aceptada. User:", decoded.username);
 
       // 3. Manejo de mensajes
-      ws.on("message", (message) => {
+      ws.on("message", async (message) => {
         try {
           const data = JSON.parse(message.toString());
           console.log("[WS] Mensaje recibido:", data);
 
-          // acá luego hacés el forward a Micro 3
+          // Verificar si el mensaje es un array
+          if (Array.isArray(data)) {
+            for (const item of data) {
+              const transformedItem = transformToMicro3Format(item);
+              await forwardToMicro3(transformedItem);
+            }
+          } else {
+            const transformedItem = transformToMicro3Format(data);
+            await forwardToMicro3(transformedItem);
+          }
         } catch (err) {
           console.error("[WS] Error procesando mensaje:", err.message);
         }
       });
     } catch (err) {
+      console.log("[WS] ❌ Token inválido:", err);
       console.log("err", err);
       console.log("[WS] ❌ Token inválido:", err.message);
       ws.close(1008, "Unauthorized");
@@ -50,4 +63,15 @@ export function startWebSocketServer() {
   console.log(
     `[WS] Servidor WebSocket escuchando en ws://localhost:${WS_PORT}`
   );
+}
+
+// Función para transformar el formato del JSON
+function transformToMicro3Format(item) {
+  return {
+    source: "http_receiver_service",
+    city: item.city,
+    value_c: item.temperature, // Cambiar "temperature" a "value_c"
+    captured_at: item.captured_at,
+    trace_id: item.trace_id,
+  };
 }
