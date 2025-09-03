@@ -22,7 +22,6 @@ export function startWebSocketServer() {
 
     const token = authHeader.split(" ")[1];
 
-    console.log(token);
 
     try {
       // 2. Validar JWT
@@ -40,6 +39,7 @@ export function startWebSocketServer() {
           if (Array.isArray(data)) {
             for (const item of data) {
               const transformedItem = transformToMicro3Format(item);
+              console.log("Mandando:", transformedItem);
               await forwardToMicro3(transformedItem);
             }
           } else {

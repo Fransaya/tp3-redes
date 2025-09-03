@@ -40,10 +40,15 @@ export async function login() {
 export async function refresh() {
   try {
     console.log("[Auth] Intentando renovar el token...");
-    const res = await axios.post(`${AUTH_URL}/token/refresh`, {
-      refreshToken: tokens.refreshToken,
+
+    // Enviar el refresh token en el encabezado
+    const res = await axios.post(`${AUTH_URL}/token/refresh`, {}, {
+      headers: {
+        "refresh-token": tokens.refreshToken, // Encabezado correcto
+      },
     });
 
+    // Actualizar el accessToken y su expiración
     tokens.accessToken = res.data.accessToken;
 
     const decoded = jwt.decode(tokens.accessToken);
@@ -54,6 +59,7 @@ export async function refresh() {
     console.log("Expiración:", tokens.exp);
   } catch (error) {
     console.error("[Auth] Error en refresh:", error.message);
+    console.error("[Auth] Detalles del error:", error.response?.data || error);
   }
 }
 
