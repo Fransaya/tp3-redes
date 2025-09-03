@@ -24,7 +24,6 @@ export function startWebSocketServer() {
 
     const token = authHeader.split(" ")[1];
 
-    console.log(token);
 
     try {
       // 2. Validar JWT
@@ -33,7 +32,7 @@ export function startWebSocketServer() {
       console.log("[WS] ✅ Conexión aceptada. User:", decoded.username);
 
       // 3. Manejo de mensajes
-      ws.on("message", async (message) => {
+      ws.on("message", (message) => {
         try {
           const data = JSON.parse(message.toString());
           console.log("[WS] Mensaje recibido:", data);
@@ -42,20 +41,20 @@ export function startWebSocketServer() {
           if (Array.isArray(data)) {
             for (const item of data) {
               const transformedItem = transformToMicro3Format(item);
+              console.log("Mandando:", transformedItem);
               await forwardToMicro3(transformedItem);
             }
           } else {
             const transformedItem = transformToMicro3Format(data);
             await forwardToMicro3(transformedItem);
           }
+
         } catch (err) {
           console.error("[WS] Error procesando mensaje:", err.message);
         }
       });
     } catch (err) {
       console.log("[WS] ❌ Token inválido:", err);
-      console.log("err", err);
-      console.log("[WS] ❌ Token inválido:", err.message);
       ws.close(1008, "Unauthorized");
     }
   });
