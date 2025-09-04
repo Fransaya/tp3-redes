@@ -23,15 +23,16 @@ const dataService = new DataService();
 router.post("/dataRecived", verifyJWT, async (req, res, next) => {
   try {
     const data = req.body;
+    let session = getSession();
 
     if (!data)
       return res.status(400).json({ error: "Faltan datos en la solicitud" });
 
     if (isTokenExpired()) {
       // Proceso de renovacion de token
+      const sessionReniew = await authenticateService();
+      session = sessionReniew;
     }
-
-    let session = getSession();
 
     if (!session) {
       // Hacemos un relogin
