@@ -3,7 +3,9 @@ import dotenv from "dotenv";
 import temperatureRoutes from "./routes/temperatureRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 
-import { login } from "./auth.js";
+import { login , refreshAccessToken} from "./auth.js";
+import { getAccessToken, getRefreshToken, isTokenExpired } from "./utils/tokenManager.js";
+
 
 import http from "http";
 
@@ -18,9 +20,17 @@ const port = 3005;
 const server = http.createServer(app);
 
 const data = await login();
+console.log(getRefreshToken())
 
-connectAndSend(data.accessToken);
+// connectAndSend(data.accessToken);
 
+setInterval(async () => {
+  if (isTokenExpired()) {
+    console.log("\n⏳ Token próximo a expirar, refrescando...");
+    const refreshed = await refreshAccessToken();
+    // connectAndSend(refreshed.accessToken);
+  }
+}, 5000); 
 // Rutas
 app.use("/", temperatureRoutes);
 app.use("/", authRoutes);

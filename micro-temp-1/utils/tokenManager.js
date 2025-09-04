@@ -17,7 +17,9 @@ export function getRefreshToken() {
 }
 
 //! this functions need a refactoring for a better time managment ( toma en ingle pa avo te lo escribi)
+const SAFE_MARGIN = 30 * 1000; // 30 segundos 
+
 export function isTokenExpired() {
-    return !tokenExpiry || Date.now() >= tokenExpiry;
+    return !tokenExpiry || (Date.now() + SAFE_MARGIN) >= tokenExpiry;
 }
 
