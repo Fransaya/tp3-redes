@@ -64,9 +64,9 @@ export async function refreshAccessToken() {
       method: "POST",
       headers: { 
         "Content-Type": "application/json",
-        "refresh-token": currentRefreshToken  // ✅ aquí va en el header
+        "refresh-token": currentRefreshToken 
       },
-      body: JSON.stringify({}) // el body puede estar vacío
+      body: JSON.stringify({}) 
     });
 
     if (!response.ok) {
@@ -75,17 +75,16 @@ export async function refreshAccessToken() {
     }
 
     const data = await response.json();
-    const { accessToken, refreshToken, expiresIn } = data;
+      const { accessToken } = data;
 
     console.log("Refresh token exitoso");
     console.log("Nuevo Access Token:", accessToken);
-    console.log("Nuevo Refresh Token:", refreshToken);
-    console.log("Expira en (s):", expiresIn);
+
 
     // Guardamos los nuevos tokens
-    setTokens({ access: accessToken, refresh: refreshToken, expiresIn });
+    setTokens({ access: accessToken, refresh: currentRefreshToken, expiresIn: 3600});
 
-    return { accessToken, refreshToken, expiresIn };
+    return { accessToken};
   } catch (error) {
     console.error("Error en refresh token:", error.message);
     throw error;
