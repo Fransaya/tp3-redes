@@ -5,7 +5,7 @@ import { forwardToMicro3 } from "./forwarder.js";
 
 dotenv.config(); // Cargar variables de entorno
 
-const WS_PORT = 3001;
+const WS_PORT = 3004;
 const JWT_SECRET = process.env.JWT_SECRET; // Leer JWT_SECRET desde .env
 
 export function startWebSocketServer() {
