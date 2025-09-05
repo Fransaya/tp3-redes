@@ -43,27 +43,6 @@ app.use(
   })
 );
 
-// Rate limiter
-const createRateLimiter = (windowMs, max, skipSuccessfulRequests = false) =>
-  rateLimit({
-    windowMs,
-    max,
-    message: { error: "Demasiadas solicitudes, inténtalo más tarde." },
-    standardHeaders: true,
-    legacyHeaders: false,
-    skipSuccessfulRequests,
-    handler: (req, res) => {
-      res.status(429).json({
-        error: "Demasiadas solicitudes desde esta IP",
-        retryAfter: Math.round(windowMs / 1000),
-      });
-    },
-  });
-
-// Rate limiter general
-const generalLimiter = createRateLimiter(1 * 60 * 1000, 5500); // 200 req/15min
-app.use(generalLimiter);
-
 // Middleware para parsing JSON optimizado
 app.use(
   express.json({

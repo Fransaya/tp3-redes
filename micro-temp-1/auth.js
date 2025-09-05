@@ -4,8 +4,10 @@ dotenv.config();
 const LOGIN_URL = process.env.LOGIN_URL;
 const USERNAME = process.env.AUTH_USER;
 const PASSWORD = process.env.PASSWORD;
+const REFRESH_URL = process.env.REFRESH_URL;
 
-import { setTokens } from "./utils/tokenManager.js";
+
+import {getRefreshToken, setTokens } from "./utils/tokenManager.js";
 
 /**
  * Hace login y devuelve accessToken, refreshToken y expiresIn
@@ -13,7 +15,7 @@ import { setTokens } from "./utils/tokenManager.js";
 export async function login() {
   try {
     console.log("Enviando login con:", {
-      username: "temp_capture_service",
+      username: USERNAME,
       password: PASSWORD,
     });
 
@@ -40,7 +42,7 @@ export async function login() {
     console.log("Expira en (s):", expiresIn);
 
     //*  this funciton save the tokens in a memory variable
-    setTokens({ accessToken, refreshToken, expiresIn });
+setTokens({ access: accessToken, refresh: refreshToken, expiresIn });
 
     return { accessToken, refreshToken, expiresIn };
   } catch (error) {
@@ -60,11 +62,11 @@ export async function refreshAccessToken() {
 
     const response = await fetch(`${REFRESH_URL}`, {
       method: "POST",
-      headers: {
+      headers: { 
         "Content-Type": "application/json",
-        "refresh-token": currentRefreshToken,
+        "refresh-token": currentRefreshToken 
       },
-      body: JSON.stringify({}),
+      body: JSON.stringify({}) 
     });
 
     if (!response.ok) {
@@ -73,19 +75,16 @@ export async function refreshAccessToken() {
     }
 
     const data = await response.json();
-    const { accessToken } = data;
+      const { accessToken } = data;
 
     console.log("Refresh token exitoso");
     console.log("Nuevo Access Token:", accessToken);
 
-    // Guardamos los nuevos tokens
-    setTokens({
-      access: accessToken,
-      refresh: currentRefreshToken,
-      expiresIn: 3600,
-    });
 
-    return { accessToken };
+    // Guardamos los nuevos tokens
+    setTokens({ access: accessToken, refresh: currentRefreshToken, expiresIn: 3600});
+
+    return { accessToken};
   } catch (error) {
     console.error("Error en refresh token:", error.message);
     throw error;

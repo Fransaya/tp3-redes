@@ -3,17 +3,21 @@ import WebSocket from "ws";
 
 dotenv.config();
 
-const WS_URL = process.env.WS_URL || "ws://localhost:3001";
-const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 10000;
+const WS_URL = process.env.WS_URL;
+const TOKEN = process.env.BEARER_TOKEN || "TU_BEARER_TOKEN";
+const INTERVAL_MS = Number(process.env.SEND_INTERVAL_MS) || 30000;
 const LOCAL_ENDPOINT =
   process.env.LOCAL_TEMPERATURES_ENDPOINT ||
-  "http://localhost:3000/temperaturas";
+  "http://localhost:3005/temperaturas";
+
+import { getTemperatureRefactoring } from "./controllers/temperatureController.js";
 
 let ws;
 let sendInterval;
 
-//* Importación de funcion para no hacer una request
-import { getTemperaturesFunction } from "./services/temperatureService.js";
+let accessTokenLocal = null;
+let tokenExpiryLocal = null;
+let refreshTokenLocal = null;
 
 import {
   getAccessToken,
@@ -22,15 +26,17 @@ import {
   setTokens,
 } from "./utils/tokenManager.js";
 
-export function connectAndSend(accessToken, refreshToken, expiresIn) {
+export function connectAndSend(token) {
   ws = new WebSocket(WS_URL, {
     headers: {
-      Authorization: `Bearer ${accessToken}`,
+      Authorization: `Bearer ${token}`,
     },
   });
 
   ws.on("open", () => {
     console.log("Conectado al WebSocket:", WS_URL);
+    accessTokenLocal = getAccessToken();
+    refreshTokenLocal = getRefreshToken();
 
     // Enviar el array obtenido desde /temperaturas cada INTERVAL_MS
     sendInterval = setInterval(() => {
@@ -39,8 +45,10 @@ export function connectAndSend(accessToken, refreshToken, expiresIn) {
         if (!ws || ws.readyState !== WebSocket.OPEN) return;
 
         // Manejo de expiracion de token
-        if (isTokenExpired(expiresIn)) {
+        if (isTokenExpired(tokenExpiryLocal)) {
+          //* si expiro renueva el token ( hace un await para esperara a que se renueve )
           // Generacion de nuevo token
+          // ! aca tenes que agregar el enpoint de refresh
           console.log("Token expirado, obteniendo nuevo token...");
           // const newTokens = await refreshAccessToken(refreshTokenLocal);
           // if (newTokens) {
@@ -57,23 +65,21 @@ export function connectAndSend(accessToken, refreshToken, expiresIn) {
         }
 
         try {
-          //! PORQUE ACA LO HACES CON UN ENPOINT Y NO LLAMAS A LA FUNC DIRECTA?
-          // const resp = await fetch(LOCAL_ENDPOINT);
-          // if (!resp.ok) {
-          //   console.error(
-          //     "Error al obtener temperaturas:",
-          //     resp.status,
-          //     resp.statusText
-          //   );
-          //   return;
-          // }
+          const resp = await getTemperatureRefactoring();
+          console.log("res in func", resp);
+          if (!resp) {
+            console.error(
+              "No se pudo obtener las temperaturas, abortando envío."
+            );
+            return;
+          }
+          const data = resp; // debe ser un array con 3 JSONs
           // const data = await resp.json(); // debe ser un array con 3 JSONs
+          ws.send(JSON.stringify(data));
+          console.log("Enviado al WS:", data);
 
-          //* Modificación de logic
-          const data = await getTemperaturesFunction();
-          console.log("data", data);
-
-          // Envio de data a microservicio 2
+          // ! aca tenes que conectar tu ws con el del tilo hijo de puta y enviarle un msj al tilo
+          //! tambien tenes que enviar el token el accessToken ( ver como )
           ws.send(JSON.stringify(data));
         } catch (err) {
           console.error("Error fetch->WS:", err.message || err);

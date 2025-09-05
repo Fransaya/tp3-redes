@@ -134,6 +134,7 @@ export const authenticateService = async () => {
       const refreshToken = session.refreshToken;
 
       saveSession({ accessToken, refreshToken, expireIn });
+      return { accessToken, refreshToken, expireIn };
     }
   } catch (error) {
     console.log("ERROR EN LOGIN", error);

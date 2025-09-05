@@ -3,7 +3,8 @@ import dotenv from "dotenv";
 import temperatureRoutes from "./routes/temperatureRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 
-import { login } from "./auth.js";
+import { login, refreshAccessToken } from "./auth.js";
+import { getRefreshToken, isTokenExpired } from "./utils/tokenManager.js";
 
 import http from "http";
 
@@ -13,27 +14,42 @@ dotenv.config();
 import { connectAndSend } from "./websocket.js";
 
 const app = express();
-const port = 3002;
+const port = 3005;
 
 const server = http.createServer(app);
 
-const session = await login();
+function scheduleRefresh(expiresIn) {
+  // margen de seguridad: refrescar 1 minuto antes de que expire
+  const SAFE_MARGIN = 60; // segundos
+  const refreshDelay = (expiresIn - SAFE_MARGIN) * 1000;
 
-// Fecha actual
-const now = new Date();
+  console.log(`[Scheduler] Próximo refresh en ${refreshDelay / 1000} segundos`);
 
-// Agregar 3600 segundos (1 hora)
-const segundos = session.expiresIn;
-const futureDate = new Date(now.getTime() + segundos * 1000);
+  setTimeout(async () => {
+    try {
+      const { accessToken } = await refreshAccessToken();
+      console.log("[Scheduler] Access token refrescado:", accessToken);
 
-console.log("Dentro de 1 hora:", futureDate);
+      scheduleRefresh(3600);
+    } catch (err) {
+      console.error("[Scheduler] Error al refrescar:", err.message);
+    }
+  }, refreshDelay);
+}
 
-connectAndSend(session.accessToken, session.refreshToken, futureDate);
+// --- flujo inicial ---
+const data = await login();
+
+// Conectar al WebSocket con el accessToken
+connectAndSend(data.accessToken);
+console.log("RefreshToken inicial:", getRefreshToken());
+
+scheduleRefresh(data.expiresIn || 3600);
 
 // Rutas
 app.use("/", temperatureRoutes);
 app.use("/", authRoutes);
 
-server.listen(port, () => {
+app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
