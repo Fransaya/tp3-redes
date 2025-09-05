@@ -13,15 +13,6 @@ import pool from "../config/db.js";
 
 const router = Router();
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
-  message: { error: "Demasiadas solicitudes, inténtalo más tarde." },
-  standardHeaders: true,
-  legacyHeaders: false,
-  skipSuccessfulRequests: true,
-});
-
 // Cache para prepared statements (mejora performance)
 const preparedStatements = {
   getUserByUsername:
@@ -68,7 +59,7 @@ const validateLoginInput = (req, res, next) => {
   next();
 };
 
-router.post("/login", authLimiter, validateLoginInput, async (req, res) => {
+router.post("/login", validateLoginInput, async (req, res) => {
   const { username, password } = req.body;
   let client;
 
