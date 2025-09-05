@@ -17,14 +17,23 @@ const port = 3000;
 
 const server = http.createServer(app);
 
-login();
+const session = await login();
 
-connectAndSend();
+// Fecha actual
+const now = new Date();
+
+// Agregar 3600 segundos (1 hora)
+const segundos = session.expiresIn;
+const futureDate = new Date(now.getTime() + segundos * 1000);
+
+console.log("Dentro de 1 hora:", futureDate);
+
+connectAndSend(session.accessToken, session.refreshToken, futureDate);
 
 // Rutas
 app.use("/", temperatureRoutes);
 app.use("/", authRoutes);
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });

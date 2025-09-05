@@ -17,7 +17,7 @@ export async function login() {
       password: PASSWORD,
     });
 
-    const response = await fetch(`${LOGIN_URL}/auth/login`, {
+    const response = await fetch(`${LOGIN_URL}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

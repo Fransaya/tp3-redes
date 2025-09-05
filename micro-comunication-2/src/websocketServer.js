@@ -13,6 +13,8 @@ export function startWebSocketServer() {
   wss.on("connection", (ws, req) => {
     // 1. Extraer Authorization del header
     const authHeader = req.headers["authorization"];
+    console.log("ws", ws);
+    console.log("req", req);
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       console.log("[WS] ❌ Conexión rechazada: falta token");
       ws.close(1008, "Unauthorized"); // policy violation
@@ -38,12 +40,14 @@ export function startWebSocketServer() {
           console.error("[WS] Error procesando mensaje:", err.message);
         }
       });
-
     } catch (err) {
+      console.log("err", err);
       console.log("[WS] ❌ Token inválido:", err.message);
       ws.close(1008, "Unauthorized");
     }
   });
 
-  console.log(`[WS] Servidor WebSocket escuchando en ws://localhost:${WS_PORT}`);
+  console.log(
+    `[WS] Servidor WebSocket escuchando en ws://localhost:${WS_PORT}`
+  );
 }
