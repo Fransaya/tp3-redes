@@ -48,3 +48,46 @@ export async function login() {
     throw error;
   }
 }
+
+export async function refreshAccessToken() {
+  try {
+    const currentRefreshToken = getRefreshToken();
+    if (!currentRefreshToken) {
+      throw new Error("No hay refresh token disponible");
+    }
+
+    console.log("Solicitando nuevo access token con refresh token...");
+
+    const response = await fetch(`${REFRESH_URL}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "refresh-token": currentRefreshToken,
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Error en refresh token: ${response.status} - ${text}`);
+    }
+
+    const data = await response.json();
+    const { accessToken } = data;
+
+    console.log("Refresh token exitoso");
+    console.log("Nuevo Access Token:", accessToken);
+
+    // Guardamos los nuevos tokens
+    setTokens({
+      access: accessToken,
+      refresh: currentRefreshToken,
+      expiresIn: 3600,
+    });
+
+    return { accessToken };
+  } catch (error) {
+    console.error("Error en refresh token:", error.message);
+    throw error;
+  }
+}

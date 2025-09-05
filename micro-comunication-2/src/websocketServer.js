@@ -14,8 +14,6 @@ export function startWebSocketServer() {
   wss.on("connection", (ws, req) => {
     // 1. Extraer Authorization del header
     const authHeader = req.headers["authorization"];
-    console.log("ws", ws);
-    console.log("req", req);
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       console.log("[WS] ❌ Conexión rechazada: falta token");
       ws.close(1008, "Unauthorized"); // policy violation
@@ -24,7 +22,6 @@ export function startWebSocketServer() {
 
     const token = authHeader.split(" ")[1];
 
-
     try {
       // 2. Validar JWT
       const decoded = jwt.verify(token, JWT_SECRET);
@@ -32,7 +29,7 @@ export function startWebSocketServer() {
       console.log("[WS] ✅ Conexión aceptada. User:", decoded.username);
 
       // 3. Manejo de mensajes
-      ws.on("message", (message) => {
+      ws.on("message", async (message) => {
         try {
           const data = JSON.parse(message.toString());
           console.log("[WS] Mensaje recibido:", data);
@@ -48,7 +45,6 @@ export function startWebSocketServer() {
             const transformedItem = transformToMicro3Format(data);
             await forwardToMicro3(transformedItem);
           }
-
         } catch (err) {
           console.error("[WS] Error procesando mensaje:", err.message);
         }
