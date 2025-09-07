@@ -63,12 +63,8 @@ app.use(
 );
 
 // Health check
-app.get("/status", (req, res) => {
-  res.status(200).json({
-    status: "process active",
-    timestamp: Date.now(),
-    uptime: process.uptime(),
-  });
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
 });
 
 // Rutas de la API

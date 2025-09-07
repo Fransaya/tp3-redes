@@ -8,5 +8,7 @@ async function init() {
   startWebSocketServer();  // 3. Iniciar WS server
   console.log("[Service] Servicio inicializado ✅");
 }
-
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 init();

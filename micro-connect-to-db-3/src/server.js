@@ -80,11 +80,7 @@ app.use(
 
 // Health check
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "OK",
-    timestamp: Date.now(),
-    uptime: process.uptime(),
-  });
+  res.status(200).json({ status: "ok" });
 });
 
 app.use("/api", dataController);
