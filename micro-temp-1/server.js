@@ -30,6 +30,9 @@ function scheduleRefresh(expiresIn) {
       const { accessToken } = await refreshAccessToken();
       console.log("[Scheduler] Access token refrescado:", accessToken);
 
+      // Reconectar al WebSocket con el nuevo accessToken
+      connectAndSend(accessToken);
+
       scheduleRefresh(3600);
     } catch (err) {
       console.error("[Scheduler] Error al refrescar:", err.message);
