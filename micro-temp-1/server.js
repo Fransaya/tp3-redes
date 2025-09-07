@@ -49,7 +49,9 @@ scheduleRefresh(data.expiresIn || 3600);
 // Rutas
 app.use("/", temperatureRoutes);
 app.use("/", authRoutes);
-
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
