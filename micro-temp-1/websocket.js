@@ -77,10 +77,6 @@ export function connectAndSend(token) {
           // const data = await resp.json(); // debe ser un array con 3 JSONs
           ws.send(JSON.stringify(data));
           console.log("Enviado al WS:", data);
-
-          // ! aca tenes que conectar tu ws con el del tilo hijo de puta y enviarle un msj al tilo
-          //! tambien tenes que enviar el token el accessToken ( ver como )
-          ws.send(JSON.stringify(data));
         } catch (err) {
           console.error("Error fetch->WS:", err.message || err);
         }
@@ -88,11 +84,12 @@ export function connectAndSend(token) {
     }, INTERVAL_MS);
   });
 
-  ws.on("close", () => {
-    console.log("WebSocket cerrado. Reintentando en 5s...");
-    clearInterval(sendInterval);
-    setTimeout(connectAndSend, 5000);
-  });
+ws.on("close", () => {
+  console.log("WebSocket cerrado. Reintentando en 5s...");
+  clearInterval(sendInterval);
+  setTimeout(() => connectAndSend(getAccessToken()), 5000);
+});
+
 
   ws.on("error", (err) => {
     console.error("Error en WebSocket:", err.message || err);
