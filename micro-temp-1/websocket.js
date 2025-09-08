@@ -39,6 +39,7 @@ export function connectAndSend(token) {
     refreshTokenLocal = getRefreshToken();
 
     // Enviar el array obtenido desde /temperaturas cada INTERVAL_MS
+    if (sendInterval) clearInterval(sendInterval);
     sendInterval = setInterval(() => {
       // envolver en IIFE async para usar await dentro de setInterval
       (async () => {
