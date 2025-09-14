@@ -9,6 +9,7 @@ import {
   Calendar,
   Wifi,
   TrendingUp,
+  Info,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -19,6 +20,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
 import axios from "axios";
 
@@ -27,6 +29,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   const [temperatureData, setTemperatureData] = useState([]);
+  const [chartData, setChartData] = useState([]);
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
@@ -39,10 +42,146 @@ const Dashboard = () => {
     maxTemp: "",
   });
   const [loading, setLoading] = useState(false);
+  const [chartLoading, setChartLoading] = useState(false);
+
+  // 🏙️ Configuración de ciudades para el gráfico
+  const CITIES = {
+    "Rio de Janeiro": {
+      color: "#ef4444",
+      bgColor: "bg-red-100",
+      textColor: "text-red-700",
+    },
+    Berlin: {
+      color: "#3b82f6",
+      bgColor: "bg-blue-100",
+      textColor: "text-blue-700",
+    },
+    Shanghai: {
+      color: "#10b981",
+      bgColor: "bg-green-100",
+      textColor: "text-green-700",
+    },
+  };
 
   useEffect(() => {
     fetchTemperatureData(1);
+    fetchChartData();
   }, []);
+
+  // 🔧 FUNCIÓN CORREGIDA para preparar datos del gráfico
+  const prepareChartData = (allData) => {
+    if (!allData || allData.length === 0) return [];
+
+    const startDate = new Date("2025-09-07T00:00:00");
+    const now = new Date();
+
+    console.log("🔍 Raw data received:", allData.length, "records");
+
+    // 1️⃣ Aplanar datos si es necesario
+    const flatData = Array.isArray(allData) ? allData.flat() : allData;
+
+    // 2️⃣ Filtrar y limpiar datos
+    const filteredData = flatData
+      .filter((item) => {
+        const ts = new Date(item.timestamp);
+        return ts >= startDate && ts <= now && item.temperature != null;
+      })
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    console.log("🔍 Filtered data:", filteredData.length, "records");
+
+    // 3️⃣ Identificar ciudades por patrones de temperatura o propiedad city
+    const identifyCityByTemperature = (temp, item) => {
+      // Primero intentar usar la propiedad city si existe
+      if (item.city) return item.city;
+
+      // Fallback: identificar por temperatura
+      // const tempFloat = parseFloat(temp);
+      // if (tempFloat === 27.1) return "Rio de Janeiro";
+      // if (tempFloat === 17.2) return "Berlin";
+      // if (tempFloat === 26.0) return "Shanghai";
+
+      // // Fallback adicional por rangos
+      // if (tempFloat > 25) return "Rio de Janeiro";
+      // if (tempFloat < 20) return "Berlin";
+      // return "Shanghai";
+    };
+
+    // 4️⃣ Agrupar por timestamp (redondeando a minutos)
+    const groupedData = {};
+
+    filteredData.forEach((item) => {
+      const timestamp = new Date(item.timestamp);
+      // Redondear a minutos para agrupar mediciones cercanas
+      const roundedTime = new Date(timestamp);
+      roundedTime.setSeconds(0, 0);
+      const timeKey = new Date(item.timestamp);
+
+      if (!groupedData[timeKey]) {
+        groupedData[timeKey] = {
+          time: roundedTime.toLocaleDateString("es-ES", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+          fullTime: roundedTime.toISOString(),
+          timestamp: timeKey,
+        };
+      }
+
+      // Identificar ciudad y agregar temperatura
+      const city = identifyCityByTemperature(item.temperature, item);
+      groupedData[timeKey][city] = parseFloat(item.temperature);
+    });
+
+    // 5️⃣ Convertir a array y ordenar
+    const result = Object.values(groupedData).sort(
+      (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+    );
+
+    console.log("📊 Chart data prepared:", result.length, "time points");
+    console.log("📊 Sample data:", result.slice(0, 3));
+    return result;
+  };
+
+  // Función para obtener datos del gráfico
+  const fetchChartData = async () => {
+    const accessToken = localStorage.getItem("authToken");
+    setChartLoading(true);
+
+    try {
+      const startDate = "2025-09-07T00:00:00";
+      const endDate = new Date().toISOString();
+
+      const response = await axios.get(
+        `${import.meta.env.VITE_DB_MICRO}/query/data`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          params: {
+            limit: 1000,
+            startDate: startDate,
+            endDate: endDate,
+            ...(filters.city.trim() && { city: filters.city.trim() }),
+            ...(filters.minTemp && { minTemp: parseFloat(filters.minTemp) }),
+            ...(filters.maxTemp && { maxTemp: parseFloat(filters.maxTemp) }),
+          },
+        }
+      );
+
+      const data = response.data.data;
+      const processedChartData = prepareChartData(data.records || []);
+      console.log("processedChartData", processedChartData);
+      setChartData(processedChartData);
+    } catch (error) {
+      console.error("Error fetching chart data:", error);
+      setChartData([]);
+    } finally {
+      setChartLoading(false);
+    }
+  };
 
   const fetchTemperatureData = async (page = 1) => {
     const accessToken = localStorage.getItem("authToken");
@@ -54,7 +193,6 @@ const Dashboard = () => {
         limit: pagination.recordsPerPage,
       };
 
-      // agregar filtros solo si existen
       if (filters.city.trim()) params.city = filters.city.trim();
       if (filters.minTemp) params.minTemp = parseFloat(filters.minTemp);
       if (filters.maxTemp) params.maxTemp = parseFloat(filters.maxTemp);
@@ -102,7 +240,8 @@ const Dashboard = () => {
   };
 
   const handleApplyFilters = () => {
-    fetchTemperatureData(1); // resetear a página 1 al aplicar filtros
+    fetchTemperatureData(1);
+    fetchChartData();
   };
 
   const handleClearFilters = () => {
@@ -111,50 +250,65 @@ const Dashboard = () => {
       minTemp: "",
       maxTemp: "",
     });
-    // Fetch data without filters
     setTimeout(() => {
       fetchTemperatureData(1);
+      fetchChartData();
     }, 0);
   };
 
-  const prepareChartData = (data) => {
-    if (!data || data.length === 0) return [];
-
-    return data
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-      .map((item, index) => ({
-        id: item.id,
-        temperature: parseFloat(item.temperature),
-        temperatureC: parseFloat(
-          (((item.temperature - 32) * 5) / 9).toFixed(1)
-        ),
-        time: new Date(item.timestamp).toLocaleTimeString("es-ES", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-        fullTime: item.timestamp,
-        city: item.city,
-        index: index,
-      }));
-  };
-
-  const CustomTooltip = ({ active, payload, label }) => {
+  // 🎨 Tooltip mejorado para el gráfico
+  const CustomTooltipChart = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
       return (
-        <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
-          <p className="text-sm text-gray-600 mb-1">
-            {data.city} - {label}
+        <div className="bg-white p-4 border border-gray-200 rounded-lg shadow-lg">
+          <p className="font-medium text-gray-800 mb-2 flex items-center">
+            <Calendar className="w-4 h-4 mr-2" />
+            {label}
           </p>
-          <p className="text-lg font-semibold text-purple-600">
-            {payload[0].value}°F ({data.temperatureC}°C)
-          </p>
-          <p className="text-xs text-gray-500">ID: {data.id}</p>
+          {payload.map((entry) => (
+            <p
+              key={entry.dataKey}
+              className="text-sm flex items-center justify-between"
+            >
+              <span className="flex items-center">
+                <div
+                  className="w-3 h-3 rounded-full mr-2"
+                  style={{ backgroundColor: entry.color }}
+                ></div>
+                {entry.dataKey}:
+              </span>
+              <span className="font-semibold ml-2 flex items-center">
+                <Thermometer className="w-3 h-3 mr-1" />
+                {entry.value?.toFixed(1)}°C
+              </span>
+            </p>
+          ))}
         </div>
       );
     }
     return null;
   };
+
+  // Estadísticas rápidas para el gráfico
+  const getStats = () => {
+    if (chartData.length === 0) return null;
+
+    const stats = {};
+    Object.keys(CITIES).forEach((city) => {
+      const temps = chartData.map((d) => d[city]).filter((t) => t != null);
+      if (temps.length > 0) {
+        stats[city] = {
+          min: Math.min(...temps),
+          max: Math.max(...temps),
+          avg: temps.reduce((a, b) => a + b, 0) / temps.length,
+          count: temps.length,
+        };
+      }
+    });
+    return stats;
+  };
+
+  const stats = getStats();
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -182,7 +336,6 @@ const Dashboard = () => {
       <Thermometer className="w-4 h-4" />
     );
 
-  // Función para mostrar solo bloques de 10 páginas
   const getPageNumbers = () => {
     const total = pagination.totalPages;
     const current = pagination.currentPage;
@@ -192,8 +345,6 @@ const Dashboard = () => {
     for (let i = start; i <= end; i++) pages.push(i);
     return pages;
   };
-
-  const chartData = prepareChartData(temperatureData);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -255,7 +406,7 @@ const Dashboard = () => {
             <input
               type="number"
               name="minTemp"
-              placeholder="Temp mínima (°F)"
+              placeholder="Temp mínima (°C)"
               value={filters.minTemp}
               onChange={handleFilterChange}
               className="border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
@@ -263,21 +414,21 @@ const Dashboard = () => {
             <input
               type="number"
               name="maxTemp"
-              placeholder="Temp máxima (°F)"
+              placeholder="Temp máxima (°C)"
               value={filters.maxTemp}
               onChange={handleFilterChange}
               className="border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
             />
             <button
               onClick={handleApplyFilters}
-              disabled={loading}
+              disabled={loading || chartLoading}
               className="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Aplicando..." : "Aplicar"}
+              {loading || chartLoading ? "Aplicando..." : "Aplicar"}
             </button>
             <button
               onClick={handleClearFilters}
-              disabled={loading}
+              disabled={loading || chartLoading}
               className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Limpiar
@@ -285,55 +436,201 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Gráfico */}
-        {temperatureData.length > 0 && (
-          <div className="mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <TrendingUp className="w-5 h-5 mr-2" />
-              Tendencia de Temperaturas
-            </h3>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                  data={chartData}
-                  margin={{
-                    top: 20,
-                    right: 30,
-                    left: 20,
-                    bottom: 20,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis
-                    dataKey="time"
-                    stroke="#666"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="#666"
-                    fontSize={12}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(value) => `${value}°F`}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line
-                    type="monotone"
-                    dataKey="temperature"
-                    stroke="#9333ea"
-                    strokeWidth={3}
-                    dot={{ fill: "#9333ea", strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, fill: "#7c3aed" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+        {/* 🚀 GRÁFICO MEJORADO */}
+        <div className="mb-8 bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          {/* Header del gráfico */}
+          <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-6 text-white">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <h3 className="text-xl font-bold flex items-center">
+                <TrendingUp className="w-6 h-6 mr-3" />
+                Comparación de Temperaturas por Ciudad
+              </h3>
+              <div className="flex items-center space-x-4 text-blue-100">
+                {chartData.length > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <Info className="w-4 h-4" />
+                    <span className="text-sm font-medium">
+                      {chartData.length} mediciones desde 7 Sep 2025
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center space-x-2 text-xs bg-white/20 px-3 py-1 rounded-full">
+                  <span>Total registros: {temperatureData.length}</span>
+                </div>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* Grid de registros */}
+          {/* Estadísticas rápidas */}
+          {stats && Object.keys(stats).length > 0 ? (
+            <div className="p-6 border-b border-gray-100">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {Object.entries(stats).map(([city, stat]) => {
+                  const cityConfig = CITIES[city];
+                  return (
+                    <div
+                      key={city}
+                      className={`${cityConfig.bgColor} p-4 rounded-lg`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span
+                          className={`font-semibold ${cityConfig.textColor}`}
+                        >
+                          {city}
+                        </span>
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: cityConfig.color }}
+                        ></div>
+                      </div>
+                      <div className="text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Promedio:</span>
+                          <span
+                            className={`font-medium ${cityConfig.textColor}`}
+                          >
+                            {stat.avg.toFixed(1)}°C
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Rango:</span>
+                          <span
+                            className={`font-medium ${cityConfig.textColor}`}
+                          >
+                            {stat.min.toFixed(1)}°C - {stat.max.toFixed(1)}°C
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Mediciones:</span>
+                          <span
+                            className={`font-medium ${cityConfig.textColor}`}
+                          >
+                            {stat.count}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            !chartLoading &&
+            chartData.length === 0 && (
+              <div className="p-6 border-b border-gray-100">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <Info className="w-5 h-5 text-yellow-600 mr-2" />
+                    <div>
+                      <h4 className="font-medium text-yellow-800">
+                        Datos en procesamiento
+                      </h4>
+                      <p className="text-sm text-yellow-700 mt-1">
+                        Se detectaron registros, pero no se pudieron procesar
+                        para el gráfico. Revise la consola para más detalles.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          )}
+
+          {/* Área del gráfico */}
+          <div className="p-6">
+            {chartLoading ? (
+              <div className="h-96 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600 font-medium">
+                    Cargando datos de temperatura...
+                  </p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    Obteniendo mediciones más recientes
+                  </p>
+                </div>
+              </div>
+            ) : chartData.length > 0 ? (
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={chartData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 80,
+                    }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#f1f5f9"
+                      strokeWidth={1}
+                    />
+                    <XAxis
+                      dataKey="time"
+                      stroke="#64748b"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      stroke="#64748b"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `${value}°C`}
+                      domain={["dataMin - 2", "dataMax + 2"]}
+                    />
+                    <Tooltip content={<CustomTooltipChart />} />
+                    <Legend
+                      wrapperStyle={{ paddingTop: "20px" }}
+                      iconType="circle"
+                    />
+
+                    {/* Lines for each city */}
+                    {Object.entries(CITIES).map(([city, config]) => (
+                      <Line
+                        key={city}
+                        type="monotone"
+                        dataKey={city}
+                        stroke={config.color}
+                        strokeWidth={3}
+                        dot={{ fill: config.color, strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6, fill: config.color, strokeWidth: 2 }}
+                        connectNulls={false}
+                        name={city}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-96 flex items-center justify-center">
+                <div className="text-center">
+                  <Thermometer className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                  <h4 className="text-lg font-semibold text-gray-600 mb-2">
+                    No hay datos disponibles para el gráfico
+                  </h4>
+                  <p className="text-gray-400 max-w-md">
+                    No se encontraron mediciones de temperatura desde el 7 de
+                    septiembre de 2025.
+                  </p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    Verifique la estructura de los datos o la conexión con la
+                    fuente.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Grid de registros (mantener igual) */}
         {loading ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
@@ -376,10 +673,7 @@ const Dashboard = () => {
                         item.temperature
                       )}`}
                     >
-                      {item.temperature}°F
-                    </div>
-                    <div className="text-sm text-gray-500 mt-1">
-                      {(((item.temperature - 32) * 5) / 9).toFixed(1)}°C
+                      {item.temperature}°C
                     </div>
                   </div>
 
@@ -395,7 +689,7 @@ const Dashboard = () => {
               ))}
             </div>
 
-            {/* Paginación mejorada */}
+            {/* Paginación */}
             <div className="flex flex-col sm:flex-row justify-between items-center mt-8 space-y-4 sm:space-y-0">
               <div className="text-sm text-gray-500">
                 Página {pagination.currentPage} de {pagination.totalPages}
