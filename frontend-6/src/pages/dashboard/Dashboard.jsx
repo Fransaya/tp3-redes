@@ -51,8 +51,8 @@ const Dashboard = () => {
   const CITIES = {
     "Rio de Janeiro": {
       color: "#23d300ff",
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-700",
+      bgColor: "bg-green-100",
+      textColor: "text-green-700",
     },
     Berlin: {
       color: "#0068caff",
@@ -61,8 +61,8 @@ const Dashboard = () => {
     },
     Shanghai: {
       color: "#fa2424ff",
-      bgColor: "bg-blue-100",
-      textColor: "text-blue-700",
+      bgColor: "bg-red-100",
+      textColor: "text-red-700",
     },
   };
 
@@ -71,84 +71,152 @@ const Dashboard = () => {
     fetchChartData();
   }, []);
 
-  // 🔧 FUNCIÓN CORREGIDA para preparar datos del gráfico
-  const prepareChartData = (allData) => {
+  // 🔧 FUNCIÓN COMPLETAMENTE NUEVA para mostrar TODOS los registros
+  const prepareChartDataComplete = (allData) => {
     if (!allData || allData.length === 0) return [];
-
-    const startDate = new Date("2025-09-07T00:00:00");
-    const now = new Date();
 
     console.log("🔍 Raw data received:", allData.length, "records");
 
-    // 1️⃣ Aplanar datos si es necesario
+    // 1️⃣ Aplanar datos si viene en arrays anidados
     const flatData = Array.isArray(allData) ? allData.flat() : allData;
+    console.log("🔍 Flattened data:", flatData.length, "records");
 
-    // 2️⃣ Filtrar y limpiar datos
-    const filteredData = flatData
+    // 2️⃣ Filtrar datos válidos y ordenar por timestamp
+    const validData = flatData
       .filter((item) => {
-        const ts = new Date(item.timestamp);
-        return ts >= startDate && ts <= now && item.temperature != null;
+        return (
+          item &&
+          item.timestamp &&
+          item.temperature != null &&
+          item.city &&
+          CITIES[item.city] // Solo ciudades que tenemos configuradas
+        );
       })
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-    console.log("🔍 Filtered data:", filteredData.length, "records");
+    console.log("🔍 Valid data after filter:", validData.length, "records");
 
-    // 3️⃣ Identificar ciudades por patrones de temperatura o propiedad city
-    const identifyCityByTemperature = (temp, item) => {
-      // Primero intentar usar la propiedad city si existe
-      if (item.city) return item.city;
+    // 3️⃣ Crear estructura para el gráfico - SIN AGRUPACIÓN
+    // Cada registro será un punto independiente en el gráfico
+    const chartPoints = [];
+    const timeMap = new Map();
 
-      // Fallback: identificar por temperatura
-      // const tempFloat = parseFloat(temp);
-      // if (tempFloat === 27.1) return "Rio de Janeiro";
-      // if (tempFloat === 17.2) return "Berlin";
-      // if (tempFloat === 26.0) return "Shanghai";
-
-      // // Fallback adicional por rangos
-      // if (tempFloat > 25) return "Rio de Janeiro";
-      // if (tempFloat < 20) return "Berlin";
-      // return "Shanghai";
-    };
-
-    // 4️⃣ Agrupar por timestamp (redondeando a minutos)
-    const groupedData = {};
-
-    filteredData.forEach((item) => {
+    validData.forEach((item, index) => {
       const timestamp = new Date(item.timestamp);
-      // Redondear a minutos para agrupar mediciones cercanas
-      const roundedTime = new Date(timestamp);
-      roundedTime.setSeconds(0, 0);
-      const timeKey = new Date(item.timestamp);
+      const timeKey = timestamp.getTime(); // Usar timestamp completo como clave única
 
-      if (!groupedData[timeKey]) {
-        groupedData[timeKey] = {
-          time: roundedTime.toLocaleDateString("es-ES", {
+      // Formatear hora para mostrar en el eje X
+      const timeLabel = timestamp.toLocaleString("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      });
+
+      // Si ya existe un punto para este timestamp exacto, crear uno nuevo con sufijo
+      let finalTimeKey = timeKey;
+      let counter = 0;
+      while (timeMap.has(finalTimeKey)) {
+        counter++;
+        finalTimeKey = `${timeKey}_${counter}`;
+      }
+
+      const chartPoint = {
+        timestamp: finalTimeKey,
+        time: timeLabel,
+        fullTime: timestamp.toISOString(),
+        originalTimestamp: timestamp,
+        index: index, // Para mantener orden
+      };
+
+      // Agregar temperatura para la ciudad específica
+      chartPoint[item.city] = parseFloat(item.temperature);
+
+      // Inicializar otras ciudades como null para este punto
+      Object.keys(CITIES).forEach((city) => {
+        if (city !== item.city) {
+          chartPoint[city] = null;
+        }
+      });
+
+      chartPoints.push(chartPoint);
+      timeMap.set(finalTimeKey, true);
+    });
+
+    console.log("📊 Chart points created:", chartPoints.length);
+    console.log("📊 Sample points:", chartPoints.slice(0, 5));
+
+    return chartPoints;
+  };
+
+  // 🚀 NUEVA función alternativa: Agrupar por intervalos muy pequeños (cada 30 segundos)
+  const prepareChartDataGrouped = (allData) => {
+    if (!allData || allData.length === 0) return [];
+
+    const flatData = Array.isArray(allData) ? allData.flat() : allData;
+
+    const validData = flatData
+      .filter((item) => {
+        return (
+          item &&
+          item.timestamp &&
+          item.temperature != null &&
+          item.city &&
+          CITIES[item.city]
+        );
+      })
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+    console.log("🔍 Valid data for grouping:", validData.length, "records");
+
+    // Agrupar por intervalos de 30 segundos
+    const groupedData = new Map();
+
+    validData.forEach((item) => {
+      const timestamp = new Date(item.timestamp);
+
+      // Redondear a intervalos de 30 segundos
+      const seconds = timestamp.getSeconds();
+      const roundedSeconds = seconds < 30 ? 0 : 30;
+      const roundedTime = new Date(timestamp);
+      roundedTime.setSeconds(roundedSeconds, 0);
+
+      const timeKey = roundedTime.getTime();
+
+      if (!groupedData.has(timeKey)) {
+        groupedData.set(timeKey, {
+          timestamp: timeKey,
+          time: roundedTime.toLocaleString("es-ES", {
             day: "2-digit",
             month: "2-digit",
             hour: "2-digit",
             minute: "2-digit",
+            second: "2-digit",
           }),
           fullTime: roundedTime.toISOString(),
-          timestamp: timeKey,
-        };
+          originalTimestamp: roundedTime,
+        });
+
+        // Inicializar todas las ciudades como null
+        Object.keys(CITIES).forEach((city) => {
+          groupedData.get(timeKey)[city] = null;
+        });
       }
 
-      // Identificar ciudad y agregar temperatura
-      const city = identifyCityByTemperature(item.temperature, item);
-      groupedData[timeKey][city] = parseFloat(item.temperature);
+      // Agregar o actualizar temperatura para la ciudad
+      groupedData.get(timeKey)[item.city] = parseFloat(item.temperature);
     });
 
-    // 5️⃣ Convertir a array y ordenar
-    const result = Object.values(groupedData).sort(
-      (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+    const result = Array.from(groupedData.values()).sort(
+      (a, b) => a.timestamp - b.timestamp
     );
 
-    console.log("📊 Chart data prepared:", result.length, "time points");
-    console.log("📊 Sample data:", result.slice(0, 3));
+    console.log("📊 Grouped chart data:", result.length, "time points");
     return result;
   };
 
-  // Función para obtener datos del gráfico
+  // Función para obtener datos del gráfico con TODOS los registros
   const fetchChartData = async () => {
     const accessToken = localStorage.getItem("authToken");
     setChartLoading(true);
@@ -157,26 +225,33 @@ const Dashboard = () => {
       const startDate = "2025-09-07T00:00:00";
       const endDate = new Date().toISOString();
 
-      const response = await axios.get(
-        `http://localhost:3001/query/data`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          params: {
-            limit: 1000,
-            startDate: startDate,
-            endDate: endDate,
-            ...(filters.city.trim() && { city: filters.city.trim() }),
-            ...(filters.minTemp && { minTemp: parseFloat(filters.minTemp) }),
-            ...(filters.maxTemp && { maxTemp: parseFloat(filters.maxTemp) }),
-          },
-        }
-      );
+      // Obtener TODOS los datos sin límite o con límite muy alto
+      const response = await axios.get(`http://localhost:3001/query/data`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          limit: 30000, // Límite muy alto para obtener todos los datos
+          startDate: startDate,
+          endDate: endDate,
+          ...(filters.city.trim() && { city: filters.city.trim() }),
+          ...(filters.minTemp && { minTemp: parseFloat(filters.minTemp) }),
+          ...(filters.maxTemp && { maxTemp: parseFloat(filters.maxTemp) }),
+        },
+      });
 
       const data = response.data.data;
-      const processedChartData = prepareChartData(data.records || []);
-      console.log("processedChartData", processedChartData);
+      console.log("🔍 API Response data:", data);
+
+      // Usar la función que muestra TODOS los registros
+      // Cambiar entre estas dos funciones según prefieras:
+      // 1. Sin agrupación (todos los puntos individuales)
+      const processedChartData = prepareChartDataComplete(data.records || []);
+
+      // 2. Agrupación mínima por intervalos de 30 segundos (descomenta para usar)
+      // const processedChartData = prepareChartDataGrouped(data.records || []);
+
+      console.log("📊 Final processed chart data:", processedChartData.length);
       setChartData(processedChartData);
     } catch (error) {
       console.error("Error fetching chart data:", error);
@@ -200,15 +275,12 @@ const Dashboard = () => {
       if (filters.minTemp) params.minTemp = parseFloat(filters.minTemp);
       if (filters.maxTemp) params.maxTemp = parseFloat(filters.maxTemp);
 
-      const response = await axios.get(
-        `http://localhost:3001/query/data`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-          params,
-        }
-      );
+      const response = await axios.get(`http://localhost:3001/query/data`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params,
+      });
 
       const data = response.data.data;
       setTemperatureData(data.records || []);
@@ -273,37 +345,42 @@ const Dashboard = () => {
             <Calendar className="w-4 h-4 mr-2" />
             {label}
           </p>
-          {payload.map((entry) => (
-            <p
-              key={entry.dataKey}
-              className="text-sm flex items-center justify-between"
-            >
-              <span className="flex items-center">
-                <div
-                  className="w-3 h-3 rounded-full mr-2"
-                  style={{ backgroundColor: entry.color }}
-                ></div>
-                {entry.dataKey}:
-              </span>
-              <span className="font-semibold ml-2 flex items-center">
-                <Thermometer className="w-3 h-3 mr-1" />
-                {entry.value?.toFixed(1)}°C
-              </span>
-            </p>
-          ))}
+          {payload
+            .filter((entry) => entry.value !== null)
+            .map((entry) => (
+              <p
+                key={entry.dataKey}
+                className="text-sm flex items-center justify-between"
+              >
+                <span className="flex items-center">
+                  <div
+                    className="w-3 h-3 rounded-full mr-2"
+                    style={{ backgroundColor: entry.color }}
+                  ></div>
+                  {entry.dataKey}:
+                </span>
+                <span className="font-semibold ml-2 flex items-center">
+                  <Thermometer className="w-3 h-3 mr-1" />
+                  {entry.value?.toFixed(1)}°C
+                </span>
+              </p>
+            ))}
         </div>
       );
     }
     return null;
   };
 
-  // Estadísticas rápidas para el gráfico
+  // Estadísticas mejoradas para todos los datos
   const getStats = () => {
     if (chartData.length === 0) return null;
 
     const stats = {};
     Object.keys(CITIES).forEach((city) => {
-      const temps = chartData.map((d) => d[city]).filter((t) => t != null);
+      const temps = chartData
+        .map((d) => d[city])
+        .filter((t) => t != null && !isNaN(t));
+
       if (temps.length > 0) {
         stats[city] = {
           min: Math.min(...temps),
@@ -353,7 +430,6 @@ const Dashboard = () => {
     for (let i = start; i <= end; i++) pages.push(i);
     return pages;
   };
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Toast Container */}
