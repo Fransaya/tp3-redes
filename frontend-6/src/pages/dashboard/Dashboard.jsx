@@ -23,6 +23,8 @@ import {
   Legend,
 } from "recharts";
 import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -43,23 +45,24 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // 🏙️ Configuración de ciudades para el gráfico
   const CITIES = {
     "Rio de Janeiro": {
-      color: "#ef4444",
-      bgColor: "bg-red-100",
-      textColor: "text-red-700",
+      color: "#23d300ff",
+      bgColor: "bg-blue-100",
+      textColor: "text-blue-700",
     },
     Berlin: {
-      color: "#3b82f6",
+      color: "#0068caff",
       bgColor: "bg-blue-100",
       textColor: "text-blue-700",
     },
     Shanghai: {
-      color: "#10b981",
-      bgColor: "bg-green-100",
-      textColor: "text-green-700",
+      color: "#fa2424ff",
+      bgColor: "bg-blue-100",
+      textColor: "text-blue-700",
     },
   };
 
@@ -155,7 +158,7 @@ const Dashboard = () => {
       const endDate = new Date().toISOString();
 
       const response = await axios.get(
-        `${import.meta.env.VITE_DB_MICRO}/query/data`,
+        `http://localhost:3001/query/data`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -198,7 +201,7 @@ const Dashboard = () => {
       if (filters.maxTemp) params.maxTemp = parseFloat(filters.maxTemp);
 
       const response = await axios.get(
-        `${import.meta.env.VITE_DB_MICRO}/query/data`,
+        `http://localhost:3001/query/data`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -224,6 +227,11 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
+    setShowLogoutConfirm(true);
+  };
+
+  const confirmLogout = () => {
+    toast.success("Sesión cerrada correctamente");
     logout();
     navigate("/login");
   };
@@ -348,6 +356,8 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Toast Container */}
+      <ToastContainer position="top-center" autoClose={2000} />
       {/* Navbar */}
       <nav className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -374,6 +384,34 @@ const Dashboard = () => {
           </div>
         </div>
       </nav>
+
+      {/* Confirmación de logout */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900">
+              ¿Seguro que quieres cerrar sesión?
+            </h3>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  confirmLogout();
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
@@ -669,9 +707,10 @@ const Dashboard = () => {
 
                   <div className="text-center mb-4">
                     <div
-                      className={`text-4xl font-bold ${getTemperatureColor(
-                        item.temperature
-                      )}`}
+                      className={`text-4xl font-bold`}
+                      style={{
+                        color: CITIES[item.city]?.color || "#6b7280", // fallback a gris si no hay ciudad
+                      }}
                     >
                       {item.temperature}°C
                     </div>

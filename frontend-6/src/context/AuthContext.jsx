@@ -48,7 +48,7 @@ export const AuthProvider = ({ children }) => {
       // const response = await fetch('/api/login', { ... });
 
       const response = await axios.post(
-        `${import.meta.env.VITE_AUTH_MICRO}/auth/login`,
+        `http://localhost:3002/auth/login`,
         credentials
       );
 
